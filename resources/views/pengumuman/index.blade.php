@@ -1,31 +1,42 @@
-<x-mading-layout title="Pengumuman RT">
+<x-mading-layout title="Pengumuman" subtitle="Informasi resmi dari pengurus RT.">
     @if(auth()->user()->isAdmin())
-        <a href="{{ route('pengumuman.create') }}" class="btn-primary w-full">➕ Buat Pengumuman</a>
+        <a href="{{ route('pengumuman.create') }}" class="btn-primary w-full">
+            <x-ic name="plus" class="h-5 w-5" /> Buat pengumuman
+        </a>
     @endif
 
     @forelse($items as $p)
         <article class="card space-y-3">
-            <h2 class="text-xl font-bold text-blue-900">{{ $p->judul }}</h2>
-            <p class="text-sm text-gray-500">{{ $p->created_at->translatedFormat('j F Y') }} · {{ $p->user->name }}</p>
-            <p class="whitespace-pre-line">{{ $p->isi }}</p>
+            <div class="flex items-center justify-between gap-3">
+                <span class="chip">Pengumuman</span>
+                <span class="meta">{{ $p->created_at->translatedFormat('j F Y') }}</span>
+            </div>
+            <h2 class="text-xl font-extrabold leading-snug text-slate-900">{{ $p->judul }}</h2>
+            <p class="whitespace-pre-line text-slate-700 leading-relaxed">{{ $p->isi }}</p>
 
             @if($p->lampiran)
                 @if(Str::endsWith($p->lampiran, '.pdf'))
-                    <a href="{{ asset('storage/'.$p->lampiran) }}" target="_blank" class="btn-outline w-full">📎 Buka Lampiran (PDF)</a>
+                    <a href="{{ asset('storage/'.$p->lampiran) }}" target="_blank" class="btn-outline w-full">
+                        <x-ic name="clip" class="h-5 w-5" /> Buka lampiran (PDF)
+                    </a>
                 @else
-                    <img src="{{ asset('storage/'.$p->lampiran) }}" class="rounded-xl w-full" alt="Lampiran">
+                    <img src="{{ asset('storage/'.$p->lampiran) }}" class="w-full rounded-xl border border-slate-200" alt="Lampiran">
                 @endif
             @endif
 
+            <p class="meta">Oleh {{ $p->user->name }}</p>
+
             @if(auth()->user()->isAdmin())
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="{{ route('pengumuman.edit', $p) }}" class="btn-outline">✏️ Edit</a>
+                <div class="grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+                    <a href="{{ route('pengumuman.edit', $p) }}" class="btn-outline">
+                        <x-ic name="pencil" class="h-5 w-5" /> Edit
+                    </a>
                     <x-hapus :action="route('pengumuman.destroy', $p)" />
                 </div>
             @endif
         </article>
     @empty
-        <div class="card text-center text-gray-500">Belum ada pengumuman.</div>
+        <x-kosong text="Belum ada pengumuman." />
     @endforelse
 
     {{ $items->links() }}

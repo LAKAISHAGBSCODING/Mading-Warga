@@ -1,5 +1,5 @@
-<x-mading-layout title="Buat Postingan">
-    <form method="POST" action="{{ route('forum.store') }}" class="card space-y-4">
+<x-mading-layout title="Buat postingan">
+    <form method="POST" action="{{ route('forum.store') }}" class="card space-y-5">
         @csrf
         <div>
             <label class="lbl">Label</label>
@@ -17,7 +17,8 @@
             <label class="lbl">Isi</label>
             <textarea class="field" name="isi" rows="6" required>{{ old('isi') }}</textarea>
         </div>
-        <p class="text-sm text-gray-500">Mau jualan? Gunakan menu Lapak ya, supaya forum tetap rapi.</p>
-        <button class="btn-primary w-full">📨 Kirim</button>
+        <p class="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Mau berjualan? Gunakan menu Lapak ya, supaya forum tetap rapi.</p>
+        <button class="btn-primary w-full"><x-ic name="send" class="h-5 w-5" /> Kirim</button>
+        <a href="{{ route('forum.index') }}" class="btn-outline w-full">Batal</a>
     </form>
 </x-mading-layout>

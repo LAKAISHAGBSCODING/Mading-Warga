@@ -1,77 +1,106 @@
-<x-mading-layout title="Agenda Warga">
+<x-mading-layout title="Agenda warga" subtitle="Kegiatan RT dan usulan dari warga.">
     <a href="{{ route('acara.create') }}" class="btn-primary w-full">
-        ➕ {{ auth()->user()->isAdmin() ? 'Buat Acara' : 'Usulkan Acara' }}
+        <x-ic name="plus" class="h-5 w-5" />
+        {{ auth()->user()->isAdmin() ? 'Buat acara' : 'Usulkan acara' }}
     </a>
 
     @if($menunggu->count())
-        <h2 class="text-xl font-bold text-orange-600">⏳ Usulan Menunggu Persetujuan</h2>
-        @foreach($menunggu as $a)
-            <div class="card border-orange-300 space-y-2">
-                <b class="text-lg">{{ $a->judul }}</b>
-                <p>Diusulkan oleh {{ $a->pengaju->name }}</p>
-                <p>{{ $a->tanggal->translatedFormat('j F Y') }}, {{ substr($a->jam, 0, 5) }} · 📍 {{ $a->lokasi }}</p>
-                <a href="{{ route('acara.edit', $a) }}" class="btn-primary w-full">Tinjau & Putuskan</a>
-            </div>
-        @endforeach
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">Usulan menunggu persetujuan</h2>
+            @foreach($menunggu as $a)
+                <div class="card space-y-3 border-amber-200 bg-amber-50/40">
+                    <div>
+                        <span class="inline-flex rounded-full bg-amber-100 text-amber-800 text-sm font-semibold px-3 py-1">Perlu ditinjau</span>
+                        <p class="mt-2 font-bold text-slate-900 text-lg">{{ $a->judul }}</p>
+                        <p class="meta">Diusulkan oleh {{ $a->pengaju->name }}</p>
+                    </div>
+                    <p class="meta flex items-center gap-1.5"><x-ic name="calendar" class="h-4 w-4" /> {{ $a->tanggal->translatedFormat('j F Y') }}, {{ substr($a->jam, 0, 5) }} WIB</p>
+                    <p class="meta flex items-center gap-1.5"><x-ic name="pin" class="h-4 w-4" /> {{ $a->lokasi }}</p>
+                    <a href="{{ route('acara.edit', $a) }}" class="btn-primary w-full">Tinjau dan putuskan</a>
+                </div>
+            @endforeach
+        </section>
     @endif
 
     @if($usulanSaya->count())
-        <h2 class="text-xl font-bold text-blue-800">Usulan Saya</h2>
-        @foreach($usulanSaya as $a)
-            <div class="card">
-                <b>{{ $a->judul }}</b>
-                <p>Status:
-                    <span class="font-semibold {{ $a->status === 'ditolak' ? 'text-red-600' : 'text-orange-600' }}">
-                        {{ $a->status === 'ditolak' ? 'Ditolak' : 'Menunggu persetujuan' }}
-                    </span>
-                </p>
-            </div>
-        @endforeach
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">Usulan saya</h2>
+            @foreach($usulanSaya as $a)
+                <div class="card flex items-center justify-between gap-3">
+                    <p class="font-semibold text-slate-900">{{ $a->judul }}</p>
+                    @if($a->status === 'ditolak')
+                        <span class="shrink-0 rounded-full bg-red-50 text-red-700 text-sm font-semibold px-3 py-1">Ditolak</span>
+                    @else
+                        <span class="shrink-0 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold px-3 py-1">Menunggu</span>
+                    @endif
+                </div>
+            @endforeach
+        </section>
     @endif
 
-    <h2 class="text-xl font-bold text-blue-800">📅 Acara Mendatang</h2>
-    @forelse($acaras as $a)
-        @php
-            $saya = $a->rsvps->firstWhere('user_id', auth()->id());
-            $hadir = $a->rsvps->where('status', 'hadir');
-            $tidak = $a->rsvps->where('status', 'tidak_hadir');
-        @endphp
-        <div class="card space-y-3">
-            <h3 class="text-xl font-bold text-blue-900">{{ $a->judul }}</h3>
-            <p>🗓️ {{ $a->tanggal->translatedFormat('l, j F Y') }}, {{ substr($a->jam, 0, 5) }} WIB</p>
-            <p>📍 {{ $a->lokasi }}</p>
-            @if($a->deskripsi)
-                <p class="whitespace-pre-line text-gray-600">{{ $a->deskripsi }}</p>
-            @endif
-            <p class="text-blue-700 font-semibold">✅ {{ $hadir->count() }} warga akan hadir</p>
-
-            <form method="POST" action="{{ route('acara.rsvp', $a) }}" class="grid grid-cols-2 gap-2">
-                @csrf
-                <button name="status" value="hadir"
-                        class="{{ $saya?->status === 'hadir' ? 'btn-primary' : 'btn-outline' }}">✅ Hadir</button>
-                <button name="status" value="tidak_hadir"
-                        class="{{ $saya?->status === 'tidak_hadir' ? 'btn-danger' : 'btn-outline' }}">❌ Tidak Hadir</button>
-            </form>
-
-            @if(auth()->user()->isAdmin())
-                <details class="bg-blue-50 rounded-xl p-3">
-                    <summary class="font-semibold cursor-pointer">Rekap kehadiran</summary>
-                    <p class="mt-2 font-semibold">Hadir ({{ $hadir->count() }})</p>
-                    <ul class="list-disc pl-5">
-                        @forelse($hadir as $r)<li>{{ $r->user->name }} ({{ $r->user->no_rumah }})</li>@empty<li>-</li>@endforelse
-                    </ul>
-                    <p class="mt-2 font-semibold">Tidak hadir ({{ $tidak->count() }})</p>
-                    <ul class="list-disc pl-5">
-                        @forelse($tidak as $r)<li>{{ $r->user->name }}</li>@empty<li>-</li>@endforelse
-                    </ul>
-                </details>
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="{{ route('acara.edit', $a) }}" class="btn-outline">✏️ Edit</a>
-                    <x-hapus :action="route('acara.destroy', $a)" />
+    <section class="space-y-3">
+        <h2 class="text-lg font-bold text-slate-900">Acara mendatang</h2>
+        @forelse($acaras as $a)
+            @php
+                $saya = $a->rsvps->firstWhere('user_id', auth()->id());
+                $hadir = $a->rsvps->where('status', 'hadir');
+                $tidak = $a->rsvps->where('status', 'tidak_hadir');
+            @endphp
+            <div class="card space-y-4">
+                <div class="flex gap-4">
+                    <div class="grid place-items-center h-16 w-16 shrink-0 rounded-xl bg-blue-600 text-white leading-none">
+                        <div class="text-center">
+                            <p class="text-2xl font-extrabold">{{ $a->tanggal->format('d') }}</p>
+                            <p class="mt-1 text-xs font-bold uppercase tracking-wide">{{ $a->tanggal->translatedFormat('M') }}</p>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-xl font-extrabold leading-snug text-slate-900">{{ $a->judul }}</h3>
+                        <p class="meta mt-1">{{ $a->tanggal->translatedFormat('l, j F Y') }}</p>
+                    </div>
                 </div>
-            @endif
-        </div>
-    @empty
-        <div class="card text-center text-gray-500">Belum ada acara.</div>
-    @endforelse
+
+                <div class="space-y-1.5 text-slate-700">
+                    <p class="flex items-center gap-2"><x-ic name="clock" class="h-5 w-5 text-blue-600" /> {{ substr($a->jam, 0, 5) }} WIB</p>
+                    <p class="flex items-center gap-2"><x-ic name="pin" class="h-5 w-5 text-blue-600" /> {{ $a->lokasi }}</p>
+                </div>
+
+                @if($a->deskripsi)
+                    <p class="whitespace-pre-line text-slate-600 leading-relaxed">{{ $a->deskripsi }}</p>
+                @endif
+
+                <p class="chip"><x-ic name="users" class="h-4 w-4" /> {{ $hadir->count() }} warga akan hadir</p>
+
+                <form method="POST" action="{{ route('acara.rsvp', $a) }}" class="grid grid-cols-2 gap-2">
+                    @csrf
+                    <button name="status" value="hadir" class="{{ $saya?->status === 'hadir' ? 'btn-primary' : 'btn-outline' }}">
+                        <x-ic name="check" class="h-5 w-5" /> Hadir
+                    </button>
+                    <button name="status" value="tidak_hadir" class="{{ $saya?->status === 'tidak_hadir' ? 'btn-dark' : 'btn-outline' }}">
+                        <x-ic name="x" class="h-5 w-5" /> Tidak hadir
+                    </button>
+                </form>
+
+                @if(auth()->user()->isAdmin())
+                    <details class="rounded-xl bg-slate-50 p-4">
+                        <summary class="cursor-pointer font-semibold text-slate-800">Rekap kehadiran</summary>
+                        <p class="mt-3 font-semibold text-slate-900">Hadir ({{ $hadir->count() }})</p>
+                        <ul class="mt-1 list-disc pl-5 text-slate-700">
+                            @forelse($hadir as $r)<li>{{ $r->user->name }} ({{ $r->user->no_rumah }})</li>@empty<li>-</li>@endforelse
+                        </ul>
+                        <p class="mt-3 font-semibold text-slate-900">Tidak hadir ({{ $tidak->count() }})</p>
+                        <ul class="mt-1 list-disc pl-5 text-slate-700">
+                            @forelse($tidak as $r)<li>{{ $r->user->name }}</li>@empty<li>-</li>@endforelse
+                        </ul>
+                    </details>
+                    <div class="grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+                        <a href="{{ route('acara.edit', $a) }}" class="btn-outline"><x-ic name="pencil" class="h-5 w-5" /> Edit</a>
+                        <x-hapus :action="route('acara.destroy', $a)" />
+                    </div>
+                @endif
+            </div>
+        @empty
+            <x-kosong text="Belum ada acara." />
+        @endforelse
+    </section>
 </x-mading-layout>
