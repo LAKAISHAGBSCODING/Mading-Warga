@@ -93,6 +93,8 @@ class AcaraController extends Controller
             ['status' => $data['status']]
         );
 
-        return back()->with('sukses', 'Jawaban kamu tersimpan.');
+        return redirect()
+    ->to(route('acara.index').'#acara-'.$acara->id)
+    ->with('sukses', 'Jawaban kamu tersimpan.');
     }
 }

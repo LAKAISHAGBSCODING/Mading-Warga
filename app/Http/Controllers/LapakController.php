@@ -8,12 +8,25 @@ use Illuminate\Support\Facades\Storage;
 
 class LapakController extends Controller
 {
-    public function index()
-    {
-        return view('lapak.index', [
-            'items' => Lapak::with('user')->latest()->paginate(12),
-        ]);
-    }
+   public function index(Request $request)
+{
+    $q = trim((string) $request->query('q', ''));
+
+    $items = Lapak::with('user')
+        ->when($q !== '', function ($query) use ($q) {
+            $query->where(function ($w) use ($q) {
+                $w->where('nama', 'like', "%{$q}%")
+                  ->orWhere('deskripsi', 'like', "%{$q}%")
+                  ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
+            });
+        })
+        ->orderByDesc('tersedia')
+        ->latest()
+        ->paginate(12)
+        ->withQueryString();
+
+    return view('lapak.index', compact('items', 'q'));
+}
 
     public function create()
     {
@@ -38,6 +51,18 @@ class LapakController extends Controller
 
         return redirect()->route('lapak.index')->with('sukses', 'Lapak kamu sudah tayang.');
     }
+
+    public function stok(Lapak $lapak)
+{
+    $u = auth()->user();
+    abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
+
+    $lapak->update(['tersedia' => ! $lapak->tersedia]);
+
+    return redirect()
+        ->to(route('lapak.index', request()->only('q', 'page')).'#lapak-'.$lapak->id)
+        ->with('sukses', $lapak->tersedia ? 'Ditandai tersedia.' : 'Ditandai habis.');
+}
 
     public function destroy(Lapak $lapak)
     {

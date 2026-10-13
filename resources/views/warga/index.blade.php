@@ -44,9 +44,12 @@
                     </button>
                 @endif
                 @if($w->status_verifikasi !== 'ditolak')
-                    <button name="status" value="ditolak" class="btn-danger">
-                        <x-ic name="x" class="h-5 w-5" /> Tolak
-                    </button>
+                    <button name="status" value="ditolak" class="btn-danger"
+        data-konfirm="Warga ini tidak akan bisa masuk ke aplikasi."
+        data-konfirm-judul="Tolak pendaftaran?"
+        data-konfirm-ya="Ya, tolak">
+    <x-ic name="x" class="h-5 w-5" /> Tolak
+</button>
                 @endif
             </form>
         </div>

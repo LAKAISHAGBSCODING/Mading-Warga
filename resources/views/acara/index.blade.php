@@ -46,7 +46,7 @@
                 $hadir = $a->rsvps->where('status', 'hadir');
                 $tidak = $a->rsvps->where('status', 'tidak_hadir');
             @endphp
-            <div class="card space-y-4">
+            <div id="acara-{{ $a->id }}" class="card space-y-4 scroll-mt-20">
                 <div class="flex gap-4">
                     <div class="grid place-items-center h-16 w-16 shrink-0 rounded-xl bg-blue-600 text-white leading-none">
                         <div class="text-center">

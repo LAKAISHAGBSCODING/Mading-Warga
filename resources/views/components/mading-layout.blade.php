@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2563eb">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title>{{ $title ?? 'Beranda' }} - {{ config('app.name') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800&display=swap" rel="stylesheet">
@@ -14,21 +15,12 @@
 <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
     <div class="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-            <span class="grid place-items-center h-10 w-10 rounded-xl bg-blue-600 text-white text-lg font-extrabold">M</span>
+            <x-logo class="h-10 w-10" />
             <span class="text-lg font-extrabold tracking-tight text-slate-900">{{ config('app.name') }}</span>
         </a>
-        <div class="flex items-center gap-1.5">
-            <a href="{{ route('profile.edit') }}" aria-label="Profil"
-               class="grid place-items-center h-10 w-10 rounded-full bg-blue-100 text-blue-700 font-bold">
-                {{ Str::upper(Str::substr(auth()->user()->name, 0, 1)) }}
-            </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button aria-label="Keluar" class="grid place-items-center h-10 w-10 rounded-full text-slate-500 hover:bg-slate-100">
-                    <x-ic name="logout" class="h-5 w-5" />
-                </button>
-            </form>
-        </div>
+        <a href="{{ route('profile.edit') }}" aria-label="Profil" class="rounded-full ring-2 ring-transparent hover:ring-blue-200">
+    <x-avatar :user="auth()->user()" size="h-10 w-10" />
+</a>
     </div>
 </header>
 
@@ -65,10 +57,9 @@ $menu = [
     ['Beranda', 'home', 'dashboard', 'dashboard'],
     ['Mading', 'doc', 'pengumuman.index', 'pengumuman.*'],
     ['Agenda', 'calendar', 'acara.index', 'acara.*'],
-    ['Forum', 'chat', 'forum.*', 'forum.*'],
+    ['Forum', 'chat', 'forum.index', 'forum.*'],
     ['Lapak', 'bag', 'lapak.index', 'lapak.*'],
 ];
-$menu[3][2] = 'forum.index';
 @endphp
 <nav class="fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
     <div class="max-w-2xl mx-auto grid grid-cols-5">
@@ -83,5 +74,69 @@ $menu[3][2] = 'forum.index';
         @endforeach
     </div>
 </nav>
+<div id="modal-konfirm" class="fixed inset-0 z-50 hidden items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="konfirm-judul">
+    <div data-tutup class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+        <div id="konfirm-ikon" class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-red-50 text-red-600">
+            <x-ic name="trash" class="h-8 w-8" />
+        </div>
+        <h3 id="konfirm-judul" class="mt-4 text-center text-xl font-extrabold text-slate-900">Hapus data ini?</h3>
+        <p id="konfirm-teks" class="mt-1 text-center leading-relaxed text-slate-600">Data yang dihapus tidak bisa dikembalikan.</p>
+        <div class="mt-6 grid grid-cols-2 gap-3">
+            <button type="button" data-tutup class="btn-outline">Tidak</button>
+            <button type="button" id="konfirm-ya" class="btn-primary !bg-red-600 hover:!bg-red-700">Ya, hapus</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const modal = document.getElementById('modal-konfirm');
+    const ya = document.getElementById('konfirm-ya');
+    const ikon = document.getElementById('konfirm-ikon');
+    let form = null, tombol = null;
+
+    function buka(sumber, f, t) {
+        form = f; tombol = t;
+        document.getElementById('konfirm-judul').textContent = sumber.dataset.konfirmJudul || 'Hapus data ini?';
+        document.getElementById('konfirm-teks').textContent = sumber.dataset.konfirm || 'Data yang dihapus tidak bisa dikembalikan.';
+        ya.textContent = sumber.dataset.konfirmYa || 'Ya, hapus';
+        const biasa = sumber.dataset.konfirmTipe === 'biasa';
+        ikon.className = 'mx-auto grid h-16 w-16 place-items-center rounded-full ' + (biasa ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600');
+        ya.className = 'btn-primary ' + (biasa ? '' : '!bg-red-600 hover:!bg-red-700');
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+        ya.focus();
+    }
+    function tutup() {
+        modal.classList.add('hidden'); modal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+        form = tombol = null;
+    }
+
+    document.addEventListener('submit', function (e) {
+        const f = e.target, t = e.submitter;
+        const sumber = (t && t.dataset.konfirm !== undefined) ? t : (f.dataset.konfirm !== undefined ? f : null);
+        if (!sumber) return;
+        e.preventDefault();
+        buka(sumber, f, t);
+    });
+
+    ya.addEventListener('click', function () {
+        const f = form, t = tombol;
+        if (!f) return;
+        if (t && t.name) {
+            const h = document.createElement('input');
+            h.type = 'hidden'; h.name = t.name; h.value = t.value;
+            f.appendChild(h);
+        }
+        tutup();
+        HTMLFormElement.prototype.submit.call(f);
+    });
+
+    modal.addEventListener('click', e => { if (e.target.hasAttribute('data-tutup')) tutup(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') tutup(); });
+})();
+</script>
 </body>
 </html>

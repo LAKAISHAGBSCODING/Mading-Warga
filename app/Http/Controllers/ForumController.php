@@ -43,7 +43,10 @@ class ForumController extends Controller
 
     public function show(ForumPost $forum)
     {
-        $forum->load(['user', 'comments.user']);
+        $forum->load([
+            'user',
+            'comments' => fn ($q) => $q->oldest()->orderBy('id')->with('user'),
+        ]);
 
         return view('forum.show', ['post' => $forum]);
     }
@@ -60,19 +63,24 @@ class ForumController extends Controller
     {
         $data = $request->validate(['isi' => 'required|string|max:2000']);
 
-        ForumComment::create($data + [
+        $komentar = ForumComment::create($data + [
             'forum_post_id' => $forum->id,
             'user_id' => $request->user()->id,
         ]);
 
-        return back()->with('sukses', 'Balasan terkirim.');
+        return redirect()
+            ->to(route('forum.show', $forum).'#komentar-'.$komentar->id)
+            ->with('sukses', 'Komentar terkirim.');
     }
 
     public function hapusKomentar(ForumComment $komentar)
     {
         $this->boleh($komentar->user_id);
+        $post = $komentar->forum_post_id;
         $komentar->delete();
 
-        return back()->with('sukses', 'Balasan dihapus.');
+        return redirect()
+            ->to(route('forum.show', $post).'#daftar-komentar')
+            ->with('sukses', 'Komentar dihapus.');
     }
 }

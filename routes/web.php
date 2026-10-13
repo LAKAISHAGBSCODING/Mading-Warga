@@ -48,6 +48,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::delete('/komentar/{komentar}', [ForumController::class, 'hapusKomentar'])->name('komentar.destroy');
 
     Route::resource('lapak', LapakController::class)->only(['index', 'create', 'store', 'destroy']);
+
+    Route::patch('/lapak/{lapak}/stok', [LapakController::class, 'stok'])->name('lapak.stok');
 });
 
 require __DIR__.'/auth.php';

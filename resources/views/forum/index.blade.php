@@ -4,17 +4,27 @@
     </a>
 
     @forelse($posts as $p)
-        <a href="{{ route('forum.show', $p) }}" class="card block space-y-2 hover:border-blue-300 transition">
-            <span class="chip">{{ $p->label }}</span>
-            <h2 class="text-lg font-bold leading-snug text-slate-900">{{ $p->judul }}</h2>
-            <p class="line-clamp-2 text-slate-600">{{ $p->isi }}</p>
-            <div class="flex items-center gap-3 pt-1 meta">
-                <span class="grid place-items-center h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{{ Str::upper(Str::substr($p->user->name, 0, 1)) }}</span>
-                <span>{{ $p->user->name }}</span>
-                <span>{{ $p->created_at->diffForHumans() }}</span>
-                <span class="ml-auto flex items-center gap-1"><x-ic name="chat" class="h-4 w-4" /> {{ $p->comments_count }}</span>
+        <div class="card space-y-3">
+            <div class="flex items-center gap-3">
+                <x-avatar :user="$p->user" size="h-11 w-11" />
+                <div class="min-w-0">
+                    <p class="font-bold leading-tight text-slate-900">{{ $p->user->name }}</p>
+                    <p class="meta">{{ $p->created_at->diffForHumans() }}</p>
+                </div>
+                <span class="chip ml-auto shrink-0">{{ $p->label }}</span>
             </div>
-        </a>
+
+            <a href="{{ route('forum.show', $p) }}" class="block space-y-1">
+                <h2 class="text-lg font-bold leading-snug text-slate-900">{{ $p->judul }}</h2>
+                <p class="line-clamp-2 text-slate-600">{{ $p->isi }}</p>
+            </a>
+
+            <a href="{{ route('forum.show', $p) }}#form-komentar"
+               class="btn-outline w-full">
+                <x-ic name="chat" class="h-5 w-5" />
+                {{ $p->comments_count > 0 ? $p->comments_count.' komentar · Tulis komentar' : 'Tulis komentar' }}
+            </a>
+        </div>
     @empty
         <x-kosong text="Belum ada postingan." />
     @endforelse
