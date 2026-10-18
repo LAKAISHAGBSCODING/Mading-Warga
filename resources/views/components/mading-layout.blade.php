@@ -18,9 +18,22 @@
             <x-logo class="h-10 w-10" />
             <span class="text-lg font-extrabold tracking-tight text-slate-900">{{ config('app.name') }}</span>
         </a>
-        <a href="{{ route('profile.edit') }}" aria-label="Profil" class="rounded-full ring-2 ring-transparent hover:ring-blue-200">
-    <x-avatar :user="auth()->user()" size="h-10 w-10" />
-</a>
+        <div class="flex items-center gap-3">
+            @php $jumlahNotifikasiBelumDibaca = auth()->user()->unreadNotifications()->count(); @endphp
+            <a href="{{ route('notifikasi.index') }}"
+                aria-label="Notifikasi, {{ $jumlahNotifikasiBelumDibaca }} belum dibaca"
+                class="relative grid h-10 w-10 place-items-center rounded-full text-slate-600 hover:bg-slate-100">
+                <x-ic name="bell" class="h-6 w-6" />
+                @if($jumlahNotifikasiBelumDibaca > 0)
+                    <span class="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+                        {{ $jumlahNotifikasiBelumDibaca > 99 ? '99+' : $jumlahNotifikasiBelumDibaca }}
+                    </span>
+                @endif
+            </a>
+            <a href="{{ route('profile.edit') }}" aria-label="Profil" class="rounded-full ring-2 ring-transparent hover:ring-blue-200">
+                <x-avatar :user="auth()->user()" size="h-10 w-10" />
+            </a>
+        </div>
     </div>
 </header>
 

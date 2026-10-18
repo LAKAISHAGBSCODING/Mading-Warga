@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Acara;
 use App\Models\Rsvp;
+use App\Models\User;
+use App\Notifications\AcaraDisetujuiNotification;
+use App\Notifications\AdminUsulanAcaraNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class AcaraController extends Controller
 {
@@ -48,10 +52,22 @@ class AcaraController extends Controller
         $data = $request->validate($this->aturan());
         $admin = $request->user()->isAdmin();
 
-        Acara::create($data + [
+        $acara = Acara::create($data + [
             'user_id' => $request->user()->id,
             'status' => $admin ? 'disetujui' : 'menunggu',
         ]);
+
+        if ($admin) {
+            Notification::send(
+                User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+                new AcaraDisetujuiNotification($acara)
+            );
+        } else {
+            Notification::send(
+                User::where('role', 'admin')->get(),
+                new AdminUsulanAcaraNotification($acara, $request->user()->name)
+            );
+        }
 
         return redirect()->route('acara.index')->with(
             'sukses',
@@ -70,7 +86,16 @@ class AcaraController extends Controller
             'status' => 'required|in:menunggu,disetujui,ditolak',
         ]);
 
+        $baruDisetujui = $acara->status !== 'disetujui' && $data['status'] === 'disetujui';
+
         $acara->update($data);
+
+        if ($baruDisetujui) {
+            Notification::send(
+                User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+                new AcaraDisetujuiNotification($acara)
+            );
+        }
 
         return redirect()->route('acara.index')->with('sukses', 'Acara diperbarui.');
     }
@@ -94,7 +119,7 @@ class AcaraController extends Controller
         );
 
         return redirect()
-    ->to(route('acara.index').'#acara-'.$acara->id)
-    ->with('sukses', 'Jawaban kamu tersimpan.');
+            ->to(route('acara.index').'#acara-'.$acara->id)
+            ->with('sukses', 'Jawaban kamu tersimpan.');
     }
 }

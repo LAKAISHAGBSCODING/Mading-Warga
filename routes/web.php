@@ -4,6 +4,7 @@ use App\Http\Controllers\AcaraController;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\LapakController;
+use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WargaController;
@@ -22,6 +23,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
+    Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
+    Route::patch('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])->name('notifikasi.baca-semua');
+    Route::patch('/notifikasi/{notification}', [NotifikasiController::class, 'baca'])->name('notifikasi.baca');
 
     // ===== KHUSUS ADMIN (didefinisikan lebih dulu) =====
     Route::middleware('admin')->group(function () {

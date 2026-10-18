@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pengumuman;
+use App\Models\User;
+use App\Notifications\PengumumanBaruNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
 class PengumumanController extends Controller
@@ -38,7 +41,12 @@ class PengumumanController extends Controller
             $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
         }
 
-        Pengumuman::create($data + ['user_id' => $request->user()->id]);
+        $pengumuman = Pengumuman::create($data + ['user_id' => $request->user()->id]);
+
+        Notification::send(
+            User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+            new PengumumanBaruNotification($pengumuman)
+        );
 
         return redirect()->route('pengumuman.index')->with('sukses', 'Pengumuman diterbitkan.');
     }
