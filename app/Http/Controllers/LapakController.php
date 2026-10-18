@@ -57,6 +57,53 @@ class LapakController extends Controller
         return redirect()->route('lapak.index')->with('sukses', 'Lapak kamu sudah tayang.');
     }
 
+    public function edit(Lapak $lapak)
+    {
+        $u = auth()->user();
+        abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
+
+        return view('lapak.create', ['lapak' => $lapak]);
+    }
+
+    public function update(Request $request, Lapak $lapak)
+    {
+        $u = auth()->user();
+        abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
+
+        $data = $request->validate([
+            'nama' => 'required|string|max:150',
+            'harga' => 'required|integer|min:0',
+            'deskripsi' => 'required|string',
+            'foto' => 'nullable|image|max:5120',
+        ]);
+        unset($data['foto']);
+
+        if ($request->boolean('hapus_foto') && $lapak->foto) {
+            try {
+                Storage::disk('public')->delete($lapak->foto);
+                $lapak->foto = null;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal menghapus foto lapak lama: '.$e->getMessage());
+            }
+        }
+
+        if ($request->hasFile('foto')) {
+            try {
+                if ($lapak->foto) {
+                    Storage::disk('public')->delete($lapak->foto);
+                }
+                $data['foto'] = $request->file('foto')->store('lapak', 'public');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Gagal memperbarui foto lapak: '.$e->getMessage());
+                return redirect()->back()->withInput()->with('error', 'Gagal mengunggah foto baru. Silakan coba lagi.');
+            }
+        }
+
+        $lapak->update($data);
+
+        return redirect()->route('lapak.index')->with('sukses', 'Lapak berhasil diperbarui.');
+    }
+
     public function stok(Lapak $lapak)
     {
         $u = auth()->user();

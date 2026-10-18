@@ -51,6 +51,28 @@ class ForumController extends Controller
         return view('forum.show', ['post' => $forum]);
     }
 
+    public function edit(ForumPost $forum)
+    {
+        $this->boleh($forum->user_id);
+
+        return view('forum.create', ['post' => $forum, 'labels' => self::LABEL]);
+    }
+
+    public function update(Request $request, ForumPost $forum)
+    {
+        $this->boleh($forum->user_id);
+
+        $data = $request->validate([
+            'label' => 'required|in:'.implode(',', self::LABEL),
+            'judul' => 'required|string|max:200',
+            'isi' => 'required|string',
+        ]);
+
+        $forum->update($data);
+
+        return redirect()->route('forum.show', $forum)->with('sukses', 'Postingan diperbarui.');
+    }
+
     public function destroy(ForumPost $forum)
     {
         $this->boleh($forum->user_id);

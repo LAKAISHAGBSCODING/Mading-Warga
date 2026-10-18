@@ -70,14 +70,19 @@
 
 @if(auth()->user()->isAdmin() || auth()->id() === $l->user_id)
     <div class="space-y-2 border-t border-slate-100 pt-4">
-        <form method="POST" action="{{ route('lapak.stok', ['lapak' => $l, 'q' => $q, 'page' => $items->currentPage()]) }}">
-            @csrf
-            @method('PATCH')
-            <button class="{{ $l->tersedia ? 'btn-outline' : 'btn-primary' }} w-full">
-                <x-ic name="{{ $l->tersedia ? 'x' : 'check' }}" class="h-5 w-5" />
-                {{ $l->tersedia ? 'Tandai habis' : 'Tandai tersedia lagi' }}
-            </button>
-        </form>
+        <div class="grid grid-cols-2 gap-2">
+            <a href="{{ route('lapak.edit', $l) }}" class="btn-outline !min-h-[44px] !py-2 text-sm font-semibold text-slate-700">
+                <x-ic name="pencil" class="h-4 w-4" /> Ubah Lapak
+            </a>
+            <form method="POST" action="{{ route('lapak.stok', ['lapak' => $l, 'q' => $q, 'page' => $items->currentPage()]) }}" class="w-full">
+                @csrf
+                @method('PATCH')
+                <button class="{{ $l->tersedia ? 'btn-outline' : 'btn-primary' }} !min-h-[44px] !py-2 text-sm w-full">
+                    <x-ic name="{{ $l->tersedia ? 'x' : 'check' }}" class="h-4 w-4" />
+                    {{ $l->tersedia ? 'Tandai habis' : 'Tandai ada' }}
+                </button>
+            </form>
+        </div>
         <x-hapus :action="route('lapak.destroy', $l)" judul="Hapus lapak ini?" teks="Lapak dan fotonya akan dihapus permanen." />
     </div>
 @endif

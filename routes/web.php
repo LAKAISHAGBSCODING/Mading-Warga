@@ -34,25 +34,20 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
         Route::resource('pengumuman', PengumumanController::class)
             ->except(['index', 'show'])->parameters(['pengumuman' => 'pengumuman']);
-
-        Route::resource('acara', AcaraController::class)
-            ->only(['edit', 'update', 'destroy'])->parameters(['acara' => 'acara']);
     });
 
     // ===== SEMUA WARGA TERVERIFIKASI =====
     Route::resource('pengumuman', PengumumanController::class)
         ->only(['index'])->parameters(['pengumuman' => 'pengumuman']);
 
-    Route::resource('acara', AcaraController::class)
-        ->only(['index', 'create', 'store'])->parameters(['acara' => 'acara']);
+    Route::resource('acara', AcaraController::class)->parameters(['acara' => 'acara']);
     Route::post('/acara/{acara}/rsvp', [AcaraController::class, 'rsvp'])->name('acara.rsvp');
 
-    Route::resource('forum', ForumController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+    Route::resource('forum', ForumController::class);
     Route::post('/forum/{forum}/komentar', [ForumController::class, 'komentar'])->name('forum.komentar');
     Route::delete('/komentar/{komentar}', [ForumController::class, 'hapusKomentar'])->name('komentar.destroy');
 
-    Route::resource('lapak', LapakController::class)->only(['index', 'create', 'store', 'destroy']);
-
+    Route::resource('lapak', LapakController::class);
     Route::patch('/lapak/{lapak}/stok', [LapakController::class, 'stok'])->name('lapak.stok');
 });
 

@@ -21,8 +21,13 @@
         </a>
 
         @if(auth()->user()->isAdmin() || auth()->id() === $post->user_id)
-            <div class="border-t border-slate-100 pt-4">
-                <x-hapus :action="route('forum.destroy', $post)" judul="Hapus postingan?" teks="Postingan dan semua komentarnya akan ikut terhapus." />
+            <div class="border-t border-slate-100 pt-4 flex items-center justify-between gap-3">
+                <a href="{{ route('forum.edit', $post) }}" class="btn-outline !min-h-[44px] !py-2 text-sm font-semibold text-slate-700">
+                    <x-ic name="pencil" class="h-4 w-4" /> Ubah Postingan
+                </a>
+                <div>
+                    <x-hapus :action="route('forum.destroy', $post)" judul="Hapus postingan?" teks="Postingan dan semua komentarnya akan ikut terhapus." />
+                </div>
             </div>
         @endif
     </article>

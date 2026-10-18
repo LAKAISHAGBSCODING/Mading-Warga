@@ -81,20 +81,43 @@ class AcaraController extends Controller
 
     public function edit(Acara $acara)
     {
+        $u = auth()->user();
+        if (! $u->isAdmin()) {
+            abort_unless($u->id === $acara->user_id && $acara->status === 'menunggu', 403);
+        }
+
         return view('acara.form', ['item' => $acara]);
     }
 
     public function update(Request $request, Acara $acara)
     {
-        $data = $request->validate($this->aturan() + [
-            'status' => 'required|in:menunggu,disetujui,ditolak',
-        ]);
+        $u = $request->user();
+        $admin = $u->isAdmin();
 
-        $baruDisetujui = $acara->status !== 'disetujui' && $data['status'] === 'disetujui';
+        if (! $admin) {
+            abort_unless($u->id === $acara->user_id && $acara->status === 'menunggu', 403);
+        }
+
+        $rules = $this->aturan();
+        if ($admin) {
+            $rules['status'] = 'required|in:menunggu,disetujui,ditolak';
+            $rules['alasan_penolakan'] = 'nullable|string|max:500';
+        }
+
+        $data = $request->validate($rules);
+
+        $statusLama = $acara->status;
+        $statusBaru = $admin ? ($data['status'] ?? $statusLama) : 'menunggu';
+        $data['status'] = $statusBaru;
+
+        if ($statusBaru !== 'ditolak') {
+            $data['alasan_penolakan'] = null;
+        }
 
         $acara->update($data);
 
-        if ($baruDisetujui) {
+        // Notifikasi jika baru disetujui
+        if ($statusLama !== 'disetujui' && $statusBaru === 'disetujui') {
             try {
                 Notification::send(
                     User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
@@ -105,11 +128,25 @@ class AcaraController extends Controller
             }
         }
 
+        // Notifikasi jika baru ditolak (ke pengusul)
+        if ($statusLama !== 'ditolak' && $statusBaru === 'ditolak' && $acara->pengaju) {
+            try {
+                $acara->pengaju->notify(new \App\Notifications\AcaraDitolakNotification($acara, $data['alasan_penolakan'] ?? null));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal mengirim notifikasi penolakan acara: '.$e->getMessage());
+            }
+        }
+
         return redirect()->route('acara.index')->with('sukses', 'Acara diperbarui.');
     }
 
     public function destroy(Acara $acara)
     {
+        $u = auth()->user();
+        if (! $u->isAdmin()) {
+            abort_unless($u->id === $acara->user_id && $acara->status === 'menunggu', 403);
+        }
+
         $acara->delete();
 
         return redirect()->route('acara.index')->with('sukses', 'Acara dihapus.');

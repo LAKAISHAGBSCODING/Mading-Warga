@@ -30,15 +30,29 @@
             <textarea class="field" name="deskripsi" rows="4">{{ old('deskripsi', $item->deskripsi) }}</textarea>
         </div>
 
-        @if($item->exists)
+        @if(auth()->user()->isAdmin() && $item->exists)
             <div>
-                <label class="lbl">Status</label>
-                <select class="field" name="status">
-                    @foreach(['menunggu' => 'Menunggu persetujuan', 'disetujui' => 'Disetujui (tampil di kalender)', 'ditolak' => 'Ditolak'] as $v => $l)
+                <label class="lbl">Status Persetujuan RT</label>
+                <select class="field" name="status" id="status-acara" onchange="toggleAlasan(this.value)">
+                    @foreach(['menunggu' => 'Menunggu persetujuan', 'disetujui' => 'Disetujui (publikasikan ke warga)', 'ditolak' => 'Ditolak'] as $v => $l)
                         <option value="{{ $v }}" @selected(old('status', $item->status) === $v)>{{ $l }}</option>
                     @endforeach
                 </select>
             </div>
+            <div id="wrapper-alasan" class="{{ old('status', $item->status) === 'ditolak' ? '' : 'hidden' }}">
+                <label class="lbl text-red-700">Alasan Penolakan <span class="font-normal text-slate-500">(disampaikan kepada pengusul)</span></label>
+                <textarea class="field border-red-300 focus:border-red-500" name="alasan_penolakan" rows="3" placeholder="Contoh: Jadwal bentrok dengan kegiatan kerja bakti RT...">{{ old('alasan_penolakan', $item->alasan_penolakan) }}</textarea>
+            </div>
+            <script>
+                function toggleAlasan(val) {
+                    const el = document.getElementById('wrapper-alasan');
+                    if (val === 'ditolak') {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                }
+            </script>
         @endif
 
         <button class="btn-primary w-full"><x-ic name="save" class="h-5 w-5" /> Simpan</button>

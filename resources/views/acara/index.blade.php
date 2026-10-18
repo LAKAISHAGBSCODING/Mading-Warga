@@ -26,12 +26,32 @@
         <section class="space-y-3">
             <h2 class="text-lg font-bold text-slate-900">Usulan saya</h2>
             @foreach($usulanSaya as $a)
-                <div class="card flex items-center justify-between gap-3">
-                    <p class="font-semibold text-slate-900">{{ $a->judul }}</p>
-                    @if($a->status === 'ditolak')
-                        <span class="shrink-0 rounded-full bg-red-50 text-red-700 text-sm font-semibold px-3 py-1">Ditolak</span>
-                    @else
-                        <span class="shrink-0 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold px-3 py-1">Menunggu</span>
+                <div class="card space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="font-bold text-slate-900 text-lg">{{ $a->judul }}</p>
+                            <p class="meta mt-0.5">{{ $a->tanggal->translatedFormat('j F Y') }}, {{ substr($a->jam, 0, 5) }} WIB &bull; {{ $a->lokasi }}</p>
+                        </div>
+                        @if($a->status === 'ditolak')
+                            <span class="shrink-0 rounded-full bg-red-100 text-red-800 text-xs font-bold px-3 py-1">Ditolak</span>
+                        @else
+                            <span class="shrink-0 rounded-full bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1">Menunggu</span>
+                        @endif
+                    </div>
+
+                    @if($a->status === 'ditolak' && $a->alasan_penolakan)
+                        <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                            <span class="font-bold">Alasan Penolakan:</span> {{ $a->alasan_penolakan }}
+                        </div>
+                    @endif
+
+                    @if($a->status === 'menunggu')
+                        <div class="flex items-center gap-2 border-t border-slate-100 pt-3">
+                            <a href="{{ route('acara.edit', $a) }}" class="btn-outline !min-h-[40px] !py-1.5 text-xs font-semibold">
+                                <x-ic name="pencil" class="h-4 w-4" /> Ubah Usulan
+                            </a>
+                            <x-hapus :action="route('acara.destroy', $a)" judul="Batalkan usulan acara?" teks="Usulan acara ini akan dihapus." />
+                        </div>
                     @endif
                 </div>
             @endforeach
