@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -43,6 +45,45 @@ class ProfileTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_profile_photo_and_existing_value_are_preserved_when_upload_fails(): void
+    {
+        $user = User::factory()->create(['foto' => 'profil/foto-lama.png']);
+        $namaLama = $user->name;
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('putFileAs')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($user)->from('/profile')->patch('/profile', [
+            'name' => 'Nama Baru',
+            'email' => $user->email,
+            'no_rumah' => 'A-12',
+            'no_wa' => '081234567890',
+            'foto' => UploadedFile::fake()->image('foto-baru.png'),
+        ]);
+
+        $response->assertRedirect('/profile')
+            ->assertSessionHas('error', 'Gagal memproses foto profil. Silakan coba kembali.');
+        $this->assertSame($namaLama, $user->fresh()->name);
+        $this->assertSame('profil/foto-lama.png', $user->fresh()->foto);
+    }
+
+    public function test_account_remains_when_profile_photo_deletion_fails(): void
+    {
+        $user = User::factory()->create(['foto' => 'profil/foto-lama.png']);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('delete')->once()->with('profil/foto-lama.png')->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($user)->from('/profile')->delete('/profile', [
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/profile')
+            ->assertSessionHas('error', 'Foto profil tidak dapat dihapus. Akun belum dihapus.');
+        $this->assertAuthenticatedAs($user);
+        $this->assertModelExists($user);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

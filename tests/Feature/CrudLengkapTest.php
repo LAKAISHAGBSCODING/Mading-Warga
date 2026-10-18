@@ -7,6 +7,8 @@ use App\Models\ForumPost;
 use App\Models\Lapak;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CrudLengkapTest extends TestCase
@@ -79,6 +81,101 @@ class CrudLengkapTest extends TestCase
 
         $response->assertRedirect(route('lapak.index'));
         $this->assertSame('Jual Madu Resmi RT', $lapak->fresh()->nama);
+    }
+
+    public function test_lapak_is_not_created_when_photo_upload_fails(): void
+    {
+        $owner = User::factory()->create(['role' => 'warga', 'status_verifikasi' => 'disetujui']);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('putFileAs')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($owner)->from(route('lapak.create'))->post(route('lapak.store'), [
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'foto' => UploadedFile::fake()->image('roti.png'),
+        ]);
+
+        $response->assertRedirect(route('lapak.create'))
+            ->assertSessionHas('error', 'Gagal mengunggah foto lapak. Silakan coba lagi.');
+        $this->assertDatabaseMissing('lapaks', ['nama' => 'Roti Rumahan']);
+    }
+
+    public function test_existing_lapak_photo_is_preserved_when_replacement_upload_fails(): void
+    {
+        $owner = User::factory()->create(['role' => 'warga', 'status_verifikasi' => 'disetujui']);
+        $lapak = Lapak::create([
+            'user_id' => $owner->id,
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'foto' => 'lapak/roti-lama.png',
+            'tersedia' => true,
+        ]);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('putFileAs')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($owner)->from(route('lapak.edit', $lapak))->put(route('lapak.update', $lapak), [
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'foto' => UploadedFile::fake()->image('roti-baru.png'),
+        ]);
+
+        $response->assertRedirect(route('lapak.edit', $lapak))
+            ->assertSessionHas('error', 'Gagal mengunggah foto baru. Silakan coba lagi.');
+        $this->assertSame('lapak/roti-lama.png', $lapak->fresh()->foto);
+    }
+
+    public function test_lapak_photo_remains_when_explicit_photo_deletion_fails(): void
+    {
+        $owner = User::factory()->create(['role' => 'warga', 'status_verifikasi' => 'disetujui']);
+        $lapak = Lapak::create([
+            'user_id' => $owner->id,
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'foto' => 'lapak/roti-lama.png',
+            'tersedia' => true,
+        ]);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('delete')->once()->with('lapak/roti-lama.png')->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($owner)->from(route('lapak.edit', $lapak))->put(route('lapak.update', $lapak), [
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'hapus_foto' => '1',
+        ]);
+
+        $response->assertRedirect(route('lapak.edit', $lapak))
+            ->assertSessionHas('error', 'Foto lama tidak dapat dihapus. Lapak belum diperbarui.');
+        $this->assertSame('lapak/roti-lama.png', $lapak->fresh()->foto);
+    }
+
+    public function test_lapak_is_not_deleted_when_photo_deletion_fails(): void
+    {
+        $owner = User::factory()->create(['role' => 'warga', 'status_verifikasi' => 'disetujui']);
+        $lapak = Lapak::create([
+            'user_id' => $owner->id,
+            'nama' => 'Roti Rumahan',
+            'harga' => 12000,
+            'deskripsi' => 'Roti dibuat setiap pagi.',
+            'foto' => 'lapak/roti-lama.png',
+            'tersedia' => true,
+        ]);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('delete')->once()->with('lapak/roti-lama.png')->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($owner)->from(route('lapak.index'))->delete(route('lapak.destroy', $lapak));
+
+        $response->assertRedirect(route('lapak.index'))
+            ->assertSessionHas('error', 'Foto lapak tidak dapat dihapus. Lapak belum dihapus.');
+        $this->assertModelExists($lapak);
     }
 
     public function test_owner_can_edit_and_update_forum_post(): void
