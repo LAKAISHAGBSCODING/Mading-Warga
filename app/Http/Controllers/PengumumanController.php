@@ -38,15 +38,24 @@ class PengumumanController extends Controller
         unset($data['lampiran']);
 
         if ($request->hasFile('lampiran')) {
-            $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
+            try {
+                $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Gagal mengunggah lampiran pengumuman: '.$e->getMessage());
+                return redirect()->back()->withInput()->with('error', 'Gagal mengunggah berkas lampiran. Silakan coba kembali.');
+            }
         }
 
         $pengumuman = Pengumuman::create($data + ['user_id' => $request->user()->id]);
 
-        Notification::send(
-            User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
-            new PengumumanBaruNotification($pengumuman)
-        );
+        try {
+            Notification::send(
+                User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+                new PengumumanBaruNotification($pengumuman)
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal mengirimkan notifikasi pengumuman baru: '.$e->getMessage());
+        }
 
         return redirect()->route('pengumuman.index')->with('sukses', 'Pengumuman diterbitkan.');
     }
@@ -62,10 +71,15 @@ class PengumumanController extends Controller
         unset($data['lampiran']);
 
         if ($request->hasFile('lampiran')) {
-            if ($pengumuman->lampiran) {
-                Storage::disk('public')->delete($pengumuman->lampiran);
+            try {
+                if ($pengumuman->lampiran) {
+                    Storage::disk('public')->delete($pengumuman->lampiran);
+                }
+                $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Gagal memperbarui lampiran pengumuman: '.$e->getMessage());
+                return redirect()->back()->withInput()->with('error', 'Gagal memperbarui berkas lampiran. Silakan coba kembali.');
             }
-            $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
         }
 
         $pengumuman->update($data);
@@ -76,7 +90,11 @@ class PengumumanController extends Controller
     public function destroy(Pengumuman $pengumuman)
     {
         if ($pengumuman->lampiran) {
-            Storage::disk('public')->delete($pengumuman->lampiran);
+            try {
+                Storage::disk('public')->delete($pengumuman->lampiran);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal menghapus file lampiran pengumuman: '.$e->getMessage());
+            }
         }
         $pengumuman->delete();
 

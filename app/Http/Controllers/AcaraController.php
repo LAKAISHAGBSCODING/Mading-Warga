@@ -57,16 +57,20 @@ class AcaraController extends Controller
             'status' => $admin ? 'disetujui' : 'menunggu',
         ]);
 
-        if ($admin) {
-            Notification::send(
-                User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
-                new AcaraDisetujuiNotification($acara)
-            );
-        } else {
-            Notification::send(
-                User::where('role', 'admin')->get(),
-                new AdminUsulanAcaraNotification($acara, $request->user()->name)
-            );
+        try {
+            if ($admin) {
+                Notification::send(
+                    User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+                    new AcaraDisetujuiNotification($acara)
+                );
+            } else {
+                Notification::send(
+                    User::where('role', 'admin')->get(),
+                    new AdminUsulanAcaraNotification($acara, $request->user()->name)
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal mengirimkan notifikasi acara: '.$e->getMessage());
         }
 
         return redirect()->route('acara.index')->with(
@@ -91,10 +95,14 @@ class AcaraController extends Controller
         $acara->update($data);
 
         if ($baruDisetujui) {
-            Notification::send(
-                User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
-                new AcaraDisetujuiNotification($acara)
-            );
+            try {
+                Notification::send(
+                    User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
+                    new AcaraDisetujuiNotification($acara)
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal mengirim notifikasi persetujuan acara: '.$e->getMessage());
+            }
         }
 
         return redirect()->route('acara.index')->with('sukses', 'Acara diperbarui.');

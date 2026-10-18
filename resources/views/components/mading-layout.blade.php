@@ -54,6 +54,13 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
+            <x-ic name="alert" class="h-5 w-5 mt-0.5 shrink-0 text-red-600" />
+            <p class="font-semibold">{{ session('error') }}</p>
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
             <ul class="list-disc pl-5 space-y-1">

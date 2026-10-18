@@ -44,7 +44,12 @@ class LapakController extends Controller
         unset($data['foto']);
 
         if ($request->hasFile('foto')) {
-            $data['foto'] = $request->file('foto')->store('lapak', 'public');
+            try {
+                $data['foto'] = $request->file('foto')->store('lapak', 'public');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Gagal mengunggah foto lapak: '.$e->getMessage());
+                return redirect()->back()->withInput()->with('error', 'Gagal mengunggah foto lapak. Silakan coba lagi.');
+            }
         }
 
         Lapak::create($data + ['user_id' => $request->user()->id]);
@@ -53,16 +58,16 @@ class LapakController extends Controller
     }
 
     public function stok(Lapak $lapak)
-{
-    $u = auth()->user();
-    abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
+    {
+        $u = auth()->user();
+        abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
 
-    $lapak->update(['tersedia' => ! $lapak->tersedia]);
+        $lapak->update(['tersedia' => ! $lapak->tersedia]);
 
-    return redirect()
-        ->to(route('lapak.index', request()->only('q', 'page')).'#lapak-'.$lapak->id)
-        ->with('sukses', $lapak->tersedia ? 'Ditandai tersedia.' : 'Ditandai habis.');
-}
+        return redirect()
+            ->to(route('lapak.index', request()->only('q', 'page')).'#lapak-'.$lapak->id)
+            ->with('sukses', $lapak->tersedia ? 'Ditandai tersedia.' : 'Ditandai habis.');
+    }
 
     public function destroy(Lapak $lapak)
     {
@@ -70,7 +75,11 @@ class LapakController extends Controller
         abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
 
         if ($lapak->foto) {
-            Storage::disk('public')->delete($lapak->foto);
+            try {
+                Storage::disk('public')->delete($lapak->foto);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal menghapus foto lapak: '.$e->getMessage());
+            }
         }
         $lapak->delete();
 

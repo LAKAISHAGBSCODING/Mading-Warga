@@ -30,6 +30,8 @@ class ProfileTest extends TestCase
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
+                'no_rumah' => 'A-12',
+                'no_wa' => '081234567890',
             ]);
 
         $response
@@ -52,6 +54,8 @@ class ProfileTest extends TestCase
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => $user->email,
+                'no_rumah' => $user->no_rumah ?? 'B-01',
+                'no_wa' => $user->no_wa ?? '081298765432',
             ]);
 
         $response

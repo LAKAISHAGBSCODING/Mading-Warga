@@ -39,16 +39,25 @@ class ProfileController extends Controller
             'no_wa' => $wa,
         ]);
 
-        if ($request->boolean('hapus_foto') && $user->foto) {
-            Storage::disk('public')->delete($user->foto);
-            $user->foto = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        if ($request->hasFile('foto')) {
-            if ($user->foto) {
+        try {
+            if ($request->boolean('hapus_foto') && $user->foto) {
                 Storage::disk('public')->delete($user->foto);
+                $user->foto = null;
             }
-            $user->foto = $request->file('foto')->store('profil', 'public');
+
+            if ($request->hasFile('foto')) {
+                if ($user->foto) {
+                    Storage::disk('public')->delete($user->foto);
+                }
+                $user->foto = $request->file('foto')->store('profil', 'public');
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal mengunggah foto profil: '.$e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Gagal memproses foto profil. Silakan coba kembali.');
         }
 
         $user->save();
@@ -68,7 +77,11 @@ class ProfileController extends Controller
         Auth::logout();
 
         if ($user->foto) {
-            Storage::disk('public')->delete($user->foto);
+            try {
+                Storage::disk('public')->delete($user->foto);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal menghapus foto profil user saat delete account: '.$e->getMessage());
+            }
         }
         $user->delete();
 
