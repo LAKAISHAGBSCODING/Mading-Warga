@@ -6,6 +6,8 @@ use App\Models\Pengumuman;
 use App\Models\PengumumanDibaca;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PengumumanPinDibacaTest extends TestCase
@@ -27,6 +29,42 @@ class PengumumanPinDibacaTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue($pengumuman->fresh()->is_pinned);
+    }
+
+    public function test_existing_attachment_is_preserved_when_replacement_upload_fails(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $pengumuman = $this->buatPengumuman($admin, ['lampiran' => 'pengumuman/lama.pdf']);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('putFileAs')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($admin)->from(route('pengumuman.index'))
+            ->put(route('pengumuman.update', $pengumuman), [
+                'judul' => 'Informasi diperbarui',
+                'isi' => 'Isi informasi terbaru.',
+                'lampiran' => UploadedFile::fake()->create('baru.pdf', 10, 'application/pdf'),
+            ]);
+
+        $response->assertRedirect(route('pengumuman.index'))
+            ->assertSessionHas('error', 'Gagal memperbarui berkas lampiran. Silakan coba kembali.');
+        $this->assertSame('pengumuman/lama.pdf', $pengumuman->fresh()->lampiran);
+    }
+
+    public function test_announcement_is_not_deleted_when_attachment_deletion_fails(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $pengumuman = $this->buatPengumuman($admin, ['lampiran' => 'pengumuman/lama.pdf']);
+        $disk = \Mockery::mock();
+        $disk->shouldReceive('delete')->once()->with('pengumuman/lama.pdf')->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->once()->andReturn($disk);
+
+        $response = $this->actingAs($admin)->from(route('pengumuman.index'))
+            ->delete(route('pengumuman.destroy', $pengumuman));
+
+        $response->assertRedirect(route('pengumuman.index'))
+            ->assertSessionHas('error', 'Lampiran pengumuman tidak dapat dihapus. Pengumuman belum dihapus.');
+        $this->assertModelExists($pengumuman);
     }
 
     public function test_admin_cannot_pin_more_than_three_announcements(): void
