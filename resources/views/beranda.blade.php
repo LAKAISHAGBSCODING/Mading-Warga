@@ -43,8 +43,15 @@
             <a href="{{ route('pengumuman.index') }}" class="text-sm font-semibold text-blue-700">Lihat semua</a>
         </div>
         @forelse($pengumumans as $p)
-            <a href="{{ route('pengumuman.index') }}" class="card block hover:border-blue-300 transition">
-                <p class="meta">{{ $p->created_at->translatedFormat('j F Y') }}</p>
+            <a href="{{ route('pengumuman.show', $p) }}" class="card block hover:border-blue-300 transition">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="meta">{{ $p->created_at->translatedFormat('j F Y') }}</p>
+                    @if($p->is_pinned)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                            <x-ic name="pin" class="h-3.5 w-3.5" /> Disematkan
+                        </span>
+                    @endif
+                </div>
                 <p class="mt-1 font-bold text-slate-900">{{ $p->judul }}</p>
                 <p class="mt-1 text-slate-600">{{ Str::limit($p->isi, 90) }}</p>
             </a>

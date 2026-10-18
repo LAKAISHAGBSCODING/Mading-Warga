@@ -11,7 +11,11 @@ class BerandaController extends Controller
     public function index()
     {
         return view('beranda', [
-            'pengumumans' => Pengumuman::latest()->take(3)->get(),
+            'pengumumans' => Pengumuman::orderByDesc('is_pinned')
+                ->orderByDesc('pinned_at')
+                ->latest()
+                ->take(3)
+                ->get(),
             'acaras' => Acara::where('status', 'disetujui')
                 ->whereDate('tanggal', '>=', today())
                 ->orderBy('tanggal')->orderBy('jam')->take(3)->get(),

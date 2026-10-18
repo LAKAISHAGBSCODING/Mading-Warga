@@ -32,13 +32,15 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/admin/warga', [WargaController::class, 'index'])->name('warga.index');
         Route::patch('/admin/warga/{user}', [WargaController::class, 'update'])->name('warga.update');
 
+        Route::patch('/pengumuman/{pengumuman}/pin', [PengumumanController::class, 'togglePin'])->name('pengumuman.pin');
+
         Route::resource('pengumuman', PengumumanController::class)
             ->except(['index', 'show'])->parameters(['pengumuman' => 'pengumuman']);
     });
 
     // ===== SEMUA WARGA TERVERIFIKASI =====
     Route::resource('pengumuman', PengumumanController::class)
-        ->only(['index'])->parameters(['pengumuman' => 'pengumuman']);
+        ->only(['index', 'show'])->parameters(['pengumuman' => 'pengumuman']);
 
     Route::resource('acara', AcaraController::class)->parameters(['acara' => 'acara']);
     Route::post('/acara/{acara}/rsvp', [AcaraController::class, 'rsvp'])->name('acara.rsvp');

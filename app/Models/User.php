@@ -54,4 +54,9 @@ class User extends Authenticatable
     {
         return $this->status_verifikasi === 'disetujui';
     }
+
+    public function pengumumanDibacas()
+    {
+        return $this->hasMany(PengumumanDibaca::class);
+    }
 }
