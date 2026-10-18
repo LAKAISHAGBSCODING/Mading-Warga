@@ -4,6 +4,19 @@
         {{ auth()->user()->isAdmin() ? 'Buat acara' : 'Usulkan acara' }}
     </a>
 
+    <form method="GET" action="{{ route('acara.index') }}" class="relative">
+        <x-ic name="search" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+        <input type="search" name="q" value="{{ $q }}" placeholder="Cari nama, lokasi, atau keterangan acara..."
+               class="field !pl-12 !pr-28 [&::-webkit-search-cancel-button]:hidden" enterkeyhint="search">
+        @if($q !== '')
+            <a href="{{ route('acara.index') }}" aria-label="Hapus pencarian"
+               class="absolute right-20 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                <x-ic name="x" class="h-5 w-5" />
+            </a>
+        @endif
+        <button class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Cari</button>
+    </form>
+
     @if($menunggu->count())
         <section class="space-y-3">
             <h2 class="text-lg font-bold text-slate-900">Usulan menunggu persetujuan</h2>
@@ -90,10 +103,20 @@
                 @endif
 
                 <p class="chip"><x-ic name="users" class="h-4 w-4" /> {{ $hadir->count() }} warga akan hadir</p>
+                <p class="text-sm text-slate-600">
+                    {{ $a->rsvp_hadir_count }} hadir · {{ $a->rsvp_tidak_hadir_count }} tidak hadir
+                    @if($a->kuota)
+                        · Sisa kuota {{ max(0, $a->kuota - $a->rsvp_hadir_count) }} dari {{ $a->kuota }}
+                    @else
+                        · Tanpa batas kuota
+                    @endif
+                </p>
 
                 <form method="POST" action="{{ route('acara.rsvp', $a) }}" class="grid grid-cols-2 gap-2">
                     @csrf
-                    <button name="status" value="hadir" class="{{ $saya?->status === 'hadir' ? 'btn-primary' : 'btn-outline' }}">
+                    <button name="status" value="hadir"
+                            @disabled($a->kuota !== null && $a->rsvp_hadir_count >= $a->kuota && $saya?->status !== 'hadir')
+                            class="{{ $saya?->status === 'hadir' ? 'btn-primary' : 'btn-outline' }} disabled:cursor-not-allowed disabled:opacity-50">
                         <x-ic name="check" class="h-5 w-5" /> Hadir
                     </button>
                     <button name="status" value="tidak_hadir" class="{{ $saya?->status === 'tidak_hadir' ? 'btn-dark' : 'btn-outline' }}">
@@ -102,7 +125,10 @@
                 </form>
 
                 @if(auth()->user()->isAdmin())
-                    <details class="rounded-xl bg-slate-50 p-4">
+                <a href="{{ route('acara.rsvp.export', $a) }}" class="btn-outline w-full">
+                    <x-ic name="doc" class="h-5 w-5" /> Unduh daftar RSVP (CSV)
+                </a>
+                <details class="rounded-xl bg-slate-50 p-4">
                         <summary class="cursor-pointer font-semibold text-slate-800">Rekap kehadiran</summary>
                         <p class="mt-3 font-semibold text-slate-900">Hadir ({{ $hadir->count() }})</p>
                         <ul class="mt-1 list-disc pl-5 text-slate-700">
@@ -122,5 +148,6 @@
         @empty
             <x-kosong text="Belum ada acara." />
         @endforelse
+        {{ $acaras->links() }}
     </section>
 </x-mading-layout>
