@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ForumComment;
 use App\Models\ForumPost;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class ForumController extends Controller
@@ -16,10 +17,21 @@ class ForumController extends Controller
         abort_unless($u->isAdmin() || $u->id === $pemilikId, 403);
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $q = trim((string) $request->query('q', ''));
+
         return view('forum.index', [
-            'posts' => ForumPost::with('user')->withCount('comments')->latest()->paginate(15),
+            'posts' => ForumPost::with('user')->withCount('comments')
+                ->when($q !== '', function (Builder $query) use ($q): void {
+                    $query->where(function (Builder $matches) use ($q): void {
+                        $matches->where('judul', 'like', "%{$q}%")
+                            ->orWhere('isi', 'like', "%{$q}%")
+                            ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', "%{$q}%"));
+                    });
+                })
+                ->latest()->paginate(10)->withQueryString(),
+            'q' => $q,
         ]);
     }
 

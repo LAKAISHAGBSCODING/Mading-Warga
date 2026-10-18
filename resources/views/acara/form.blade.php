@@ -26,6 +26,10 @@
             <input class="field" name="lokasi" value="{{ old('lokasi', $item->lokasi) }}" required>
         </div>
         <div>
+            <label class="lbl">Kuota peserta <span class="font-normal text-slate-500">(boleh kosong untuk tanpa batas)</span></label>
+            <input type="number" inputmode="numeric" min="1" class="field" name="kuota" value="{{ old('kuota', $item->kuota) }}">
+        </div>
+        <div>
             <label class="lbl">Keterangan <span class="font-normal text-slate-500">(boleh kosong)</span></label>
             <textarea class="field" name="deskripsi" rows="4">{{ old('deskripsi', $item->deskripsi) }}</textarea>
         </div>
