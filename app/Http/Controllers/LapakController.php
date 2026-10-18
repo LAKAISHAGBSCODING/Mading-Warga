@@ -4,29 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\Lapak;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class LapakController extends Controller
 {
-   public function index(Request $request)
-{
-    $q = trim((string) $request->query('q', ''));
+    public function index(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
 
-    $items = Lapak::with('user')
-        ->when($q !== '', function ($query) use ($q) {
-            $query->where(function ($w) use ($q) {
-                $w->where('nama', 'like', "%{$q}%")
-                  ->orWhere('deskripsi', 'like', "%{$q}%")
-                  ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
-            });
-        })
-        ->orderByDesc('tersedia')
-        ->latest()
-        ->paginate(12)
-        ->withQueryString();
+        $items = Lapak::with('user')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('nama', 'like', "%{$q}%")
+                        ->orWhere('deskripsi', 'like', "%{$q}%")
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%"));
+                });
+            })
+            ->orderByDesc('tersedia')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
-    return view('lapak.index', compact('items', 'q'));
-}
+        return view('lapak.index', compact('items', 'q'));
+    }
 
     public function create()
     {
@@ -45,9 +47,14 @@ class LapakController extends Controller
 
         if ($request->hasFile('foto')) {
             try {
-                $data['foto'] = $request->file('foto')->store('lapak', 'public');
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('Gagal mengunggah foto lapak: '.$e->getMessage());
+                $foto = $request->file('foto')->store('lapak', 'public');
+                if ($foto === false) {
+                    throw new \RuntimeException('Penyimpanan foto lapak mengembalikan false.');
+                }
+                $data['foto'] = $foto;
+            } catch (Throwable $e) {
+                Log::error('Gagal mengunggah foto lapak: '.$e->getMessage());
+
                 return redirect()->back()->withInput()->with('error', 'Gagal mengunggah foto lapak. Silakan coba lagi.');
             }
         }
@@ -78,28 +85,32 @@ class LapakController extends Controller
         ]);
         unset($data['foto']);
 
-        if ($request->boolean('hapus_foto') && $lapak->foto) {
-            try {
-                Storage::disk('public')->delete($lapak->foto);
-                $lapak->foto = null;
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Gagal menghapus foto lapak lama: '.$e->getMessage());
-            }
-        }
-
+        $fotoLama = $lapak->foto;
+        $fotoBaru = null;
         if ($request->hasFile('foto')) {
             try {
-                if ($lapak->foto) {
-                    Storage::disk('public')->delete($lapak->foto);
+                $fotoBaru = $request->file('foto')->store('lapak', 'public');
+                if ($fotoBaru === false) {
+                    throw new \RuntimeException('Penyimpanan foto lapak mengembalikan false.');
                 }
-                $data['foto'] = $request->file('foto')->store('lapak', 'public');
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('Gagal memperbarui foto lapak: '.$e->getMessage());
+                $data['foto'] = $fotoBaru;
+            } catch (Throwable $e) {
+                Log::error('Gagal memperbarui foto lapak: '.$e->getMessage());
+
                 return redirect()->back()->withInput()->with('error', 'Gagal mengunggah foto baru. Silakan coba lagi.');
             }
+        } elseif ($request->boolean('hapus_foto') && $fotoLama) {
+            if (! $this->hapusBerkas($fotoLama, 'foto lapak')) {
+                return redirect()->back()->withInput()->with('error', 'Foto lama tidak dapat dihapus. Lapak belum diperbarui.');
+            }
+            $data['foto'] = null;
         }
 
         $lapak->update($data);
+
+        if ($fotoBaru !== null && $fotoLama && ! $this->hapusBerkas($fotoLama, 'foto lapak lama')) {
+            return redirect()->route('lapak.index')->with('error', 'Lapak berhasil diperbarui, tetapi foto lama belum dapat dihapus.');
+        }
 
         return redirect()->route('lapak.index')->with('sukses', 'Lapak berhasil diperbarui.');
     }
@@ -122,14 +133,29 @@ class LapakController extends Controller
         abort_unless($u->isAdmin() || $u->id === $lapak->user_id, 403);
 
         if ($lapak->foto) {
-            try {
-                Storage::disk('public')->delete($lapak->foto);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Gagal menghapus foto lapak: '.$e->getMessage());
+            if (! $this->hapusBerkas($lapak->foto, 'foto lapak')) {
+                return redirect()->back()->with('error', 'Foto lapak tidak dapat dihapus. Lapak belum dihapus.');
             }
         }
         $lapak->delete();
 
         return redirect()->route('lapak.index')->with('sukses', 'Lapak dihapus.');
+    }
+
+    private function hapusBerkas(string $path, string $konteks): bool
+    {
+        try {
+            $dihapus = Storage::disk('public')->delete($path);
+        } catch (Throwable $e) {
+            Log::warning("Gagal menghapus {$konteks}: ".$e->getMessage());
+
+            return false;
+        }
+
+        if (! $dihapus) {
+            Log::warning("Gagal menghapus {$konteks}; disk mengembalikan false.", ['path' => $path]);
+        }
+
+        return $dihapus;
     }
 }

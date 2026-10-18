@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class PengumumanController extends Controller
 {
@@ -132,8 +133,12 @@ class PengumumanController extends Controller
 
         if ($request->hasFile('lampiran')) {
             try {
-                $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
-            } catch (\Throwable $e) {
+                $lampiran = $request->file('lampiran')->store('pengumuman', 'public');
+                if ($lampiran === false) {
+                    throw new \RuntimeException('Penyimpanan lampiran pengumuman mengembalikan false.');
+                }
+                $data['lampiran'] = $lampiran;
+            } catch (Throwable $e) {
                 Log::error('Gagal mengunggah lampiran pengumuman: '.$e->getMessage());
 
                 return redirect()->back()->withInput()->with('error', 'Gagal mengunggah berkas lampiran. Silakan coba kembali.');
@@ -147,7 +152,7 @@ class PengumumanController extends Controller
                 User::where('role', 'warga')->where('status_verifikasi', 'disetujui')->get(),
                 new PengumumanBaruNotification($pengumuman)
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('Gagal mengirimkan notifikasi pengumuman baru: '.$e->getMessage());
         }
 
@@ -164,13 +169,16 @@ class PengumumanController extends Controller
         $data = $request->validate($this->aturan());
         unset($data['lampiran']);
 
+        $lampiranLama = $pengumuman->lampiran;
+        $lampiranBaru = null;
         if ($request->hasFile('lampiran')) {
             try {
-                if ($pengumuman->lampiran) {
-                    Storage::disk('public')->delete($pengumuman->lampiran);
+                $lampiranBaru = $request->file('lampiran')->store('pengumuman', 'public');
+                if ($lampiranBaru === false) {
+                    throw new \RuntimeException('Penyimpanan lampiran pengumuman mengembalikan false.');
                 }
-                $data['lampiran'] = $request->file('lampiran')->store('pengumuman', 'public');
-            } catch (\Throwable $e) {
+                $data['lampiran'] = $lampiranBaru;
+            } catch (Throwable $e) {
                 Log::error('Gagal memperbarui lampiran pengumuman: '.$e->getMessage());
 
                 return redirect()->back()->withInput()->with('error', 'Gagal memperbarui berkas lampiran. Silakan coba kembali.');
@@ -179,20 +187,39 @@ class PengumumanController extends Controller
 
         $pengumuman->update($data);
 
+        if ($lampiranBaru !== null && $lampiranLama && ! $this->hapusBerkas($lampiranLama, 'lampiran pengumuman lama')) {
+            return redirect()->route('pengumuman.index')->with('error', 'Pengumuman berhasil diperbarui, tetapi lampiran lama belum dapat dihapus.');
+        }
+
         return redirect()->route('pengumuman.index')->with('sukses', 'Pengumuman diperbarui.');
     }
 
     public function destroy(Pengumuman $pengumuman)
     {
         if ($pengumuman->lampiran) {
-            try {
-                Storage::disk('public')->delete($pengumuman->lampiran);
-            } catch (\Throwable $e) {
-                Log::warning('Gagal menghapus file lampiran pengumuman: '.$e->getMessage());
+            if (! $this->hapusBerkas($pengumuman->lampiran, 'lampiran pengumuman')) {
+                return redirect()->back()->with('error', 'Lampiran pengumuman tidak dapat dihapus. Pengumuman belum dihapus.');
             }
         }
         $pengumuman->delete();
 
         return redirect()->route('pengumuman.index')->with('sukses', 'Pengumuman dihapus.');
+    }
+
+    private function hapusBerkas(string $path, string $konteks): bool
+    {
+        try {
+            $dihapus = Storage::disk('public')->delete($path);
+        } catch (Throwable $e) {
+            Log::warning("Gagal menghapus {$konteks}: ".$e->getMessage());
+
+            return false;
+        }
+
+        if (! $dihapus) {
+            Log::warning("Gagal menghapus {$konteks}; disk mengembalikan false.", ['path' => $path]);
+        }
+
+        return $dihapus;
     }
 }
