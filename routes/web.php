@@ -31,6 +31,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/admin/warga', [WargaController::class, 'index'])->name('warga.index');
         Route::patch('/admin/warga/{user}', [WargaController::class, 'update'])->name('warga.update');
+        Route::get('/admin/acara/{acara}/rsvp.csv', [AcaraController::class, 'exportRsvp'])->name('acara.rsvp.export');
+
+        Route::patch('/pengumuman/{pengumuman}/pin', [PengumumanController::class, 'togglePin'])->name('pengumuman.pin');
 
         Route::resource('pengumuman', PengumumanController::class)
             ->except(['index', 'show'])->parameters(['pengumuman' => 'pengumuman']);
@@ -38,16 +41,16 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     // ===== SEMUA WARGA TERVERIFIKASI =====
     Route::resource('pengumuman', PengumumanController::class)
-        ->only(['index'])->parameters(['pengumuman' => 'pengumuman']);
+        ->only(['index', 'show'])->parameters(['pengumuman' => 'pengumuman']);
 
-    Route::resource('acara', AcaraController::class)->parameters(['acara' => 'acara']);
+    Route::resource('acara', AcaraController::class)->except(['show'])->parameters(['acara' => 'acara']);
     Route::post('/acara/{acara}/rsvp', [AcaraController::class, 'rsvp'])->name('acara.rsvp');
 
     Route::resource('forum', ForumController::class);
     Route::post('/forum/{forum}/komentar', [ForumController::class, 'komentar'])->name('forum.komentar');
     Route::delete('/komentar/{komentar}', [ForumController::class, 'hapusKomentar'])->name('komentar.destroy');
 
-    Route::resource('lapak', LapakController::class);
+    Route::resource('lapak', LapakController::class)->except(['show']);
     Route::patch('/lapak/{lapak}/stok', [LapakController::class, 'stok'])->name('lapak.stok');
 });
 
